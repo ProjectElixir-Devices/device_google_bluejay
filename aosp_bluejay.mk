@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# Use scudo
+PRODUCT_USE_SCUDO := true
+
 # Inherit some common Lineage stuff.
 TARGET_DISABLE_EPPE := true
 $(call inherit-product, vendor/aosp/config/common_full_phone.mk)
