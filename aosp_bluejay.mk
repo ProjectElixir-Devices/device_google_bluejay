@@ -53,8 +53,8 @@ TARGET_USES_AOSP_RECOVERY := true
 
 PRODUCT_BUILD_PROP_OVERRIDES += \
     TARGET_PRODUCT=bluejay \
-    PRIVATE_BUILD_DESC="bluejay-user 13 TQ1A.230205.002 9471150 release-keys"
+    PRIVATE_BUILD_DESC="bluejay-user 13 TQ2A.230405.003.E1 9802792 release-keys"
 
-BUILD_FINGERPRINT := google/bluejay/bluejay:13/TQ1A.230205.002/9471150:user/release-keys
+BUILD_FINGERPRINT := google/bluejay/bluejay:13/TQ2A.230405.003.E1/9802792:user/release-keys
 
 $(call inherit-product, vendor/google/bluejay/bluejay-vendor.mk)
