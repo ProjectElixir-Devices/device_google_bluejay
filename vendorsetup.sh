@@ -14,7 +14,7 @@ rm -rf kernel/google/gs101/private/google-modules/aoc
 git clone https://android.googlesource.com/kernel/google-modules/aoc --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/aoc
 
 rm -rf kernel/google/gs101/private/google-modules/aoc_ipc
-git clone https://android.googlesource.com/kernel/google-modules/aoc_ipc --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/aoc-ipc
+git clone https://android.googlesource.com/kernel/google-modules/aoc-ipc --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/aoc_ipc
 
 rm -rf kernel/google/gs101/private/google-modules/bluetooth
 git clone https://android.googlesource.com/kernel/google-modules/bluetooth/broadcom --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/bluetooth/broadcom
