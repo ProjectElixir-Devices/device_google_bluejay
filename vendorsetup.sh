@@ -1,18 +1,11 @@
-echo "Cloning needed stuff!"
-
-echo "[1/4] Cloning common tree"
 rm -rf device/google/gs101
 git clone https://github.com/ProjectElixir-Devices/device_google_gs101 device/google/gs101 --depth 1
 
-echo "[2/4] Cloning kernel tree"
 rm -rf kernel/google/gs101/private/gs-google
 git clone https://github.com/ProjectElixir-Devices/kernel_google_gs101 kernel/google/gs101/private/gs-google --depth 1
 
-echo "[3/4] Cloning vendor tree"
 rm -rf vendor/google/bluejay
 git clone https://gitlab.com/projectelixiros/vendor_google_bluejay vendor/google/bluejay --depth 1
-
-echo "[4/4] Cloning kernel modules"
 
 rm -rf kernel/google/gs101/private/google-modules/amplifiers
 git clone https://android.googlesource.com/kernel/google-modules/amplifiers --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/amplifiers
