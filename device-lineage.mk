@@ -5,7 +5,9 @@
 #
 
 # Overlays
-DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay-lineage
+DEVICE_PACKAGE_OVERLAYS += \
+    $(LOCAL_PATH)/overlay-elixir
+
 
 # EUICC
 PRODUCT_COPY_FILES += \
