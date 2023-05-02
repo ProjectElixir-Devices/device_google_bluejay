@@ -22,9 +22,6 @@ git clone https://android.googlesource.com/kernel/google-modules/bluetooth/broad
 rm -rf kernel/google/gs101/private/google-modules/bms
 git clone https://android.googlesource.com/kernel/google-modules/bms --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/bms
 
-rm -rf kernel/google/gs101/private/google-modules/display
-git clone https://android.googlesource.com/kernel/google-modules/display --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/display
-
 rm -rf kernel/google/gs101/private/google-modules/edgetpu/
 git clone https://android.googlesource.com/kernel/google-modules/edgetpu/abrolhos --depth 1 --no-tags --single-branch -b android-13.0.0_r0.69 kernel/google/gs101/private/google-modules/edgetpu/abrolhos
 

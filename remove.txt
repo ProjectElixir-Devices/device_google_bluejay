@@ -6,7 +6,6 @@ kernel/google/gs101/private/google-modules/aoc
 kernel/google/gs101/private/google-modules/aoc_ipc
 kernel/google/gs101/private/google-modules/bluetooth
 kernel/google/gs101/private/google-modules/bms
-kernel/google/gs101/private/google-modules/display
 kernel/google/gs101/private/google-modules/edgetpu
 kernel/google/gs101/private/google-modules/fingerprint
 kernel/google/gs101/private/google-modules/gpu
