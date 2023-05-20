@@ -7,6 +7,9 @@ git clone https://github.com/ProjectElixir-Devices/kernel_google_gs101 kernel/go
 rm -rf vendor/google/bluejay
 git clone https://gitlab.com/projectelixiros/vendor_google_bluejay vendor/google/bluejay --depth 1
 
+rm -rf kernel/google/gs101/private/devices/google/bluejay
+git clone https://android.googlesource.com/kernel/devices/google/bluejay --depth 1 --no-tags --single-branch -b android-13.0.0_r0.74 kernel/google/gs101/private/devices/google/bluejay
+
 rm -rf kernel/google/gs101/private/google-modules/amplifiers
 git clone https://android.googlesource.com/kernel/google-modules/amplifiers --depth 1 --no-tags --single-branch -b android-13.0.0_r0.74 kernel/google/gs101/private/google-modules/amplifiers
 
