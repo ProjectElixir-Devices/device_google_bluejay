@@ -16,10 +16,6 @@ PRODUCT_COPY_FILES += \
 # PixelParts
 include packages/apps/PixelParts/device.mk
 
-# HBM
-PRODUCT_PACKAGES := \
-    HbmSVManagerOverlay
-
 # Build necessary packages for vendor
 
 # Audio
