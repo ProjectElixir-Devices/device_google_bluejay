@@ -1,3 +1,11 @@
+TOP=$(pwd)
+cd $TOP/packages/apps/Settings
+patch -p1 < $TOP/device/google/bluejay/0001-Settings-Add-support-for-allowing-disallowing-apps-o.patch
+patch -p1 < $TOP/device/google/bluejay/0002-Settings-Add-support-for-allowing-disallowing-apps-o.patch
+cd $TOP/frameworks/base
+patch -p1 < $TOP/device/google/bluejay/0001-fw-b-Add-support-for-allowing-disallowing-apps-on-ce.patch
+cd $TOP
+
 rm -rf device/google/gs101
 git clone https://github.com/ProjectElixir-Devices/device_google_gs101 device/google/gs101 --depth 1
 
