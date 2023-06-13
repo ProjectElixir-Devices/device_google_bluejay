@@ -1,0 +1,104 @@
+From 0828aa9cd34e6f7816d3414a210ac1f9ba101876 Mon Sep 17 00:00:00 2001
+From: Tommy Webb <tommy@calyxinstitute.org>
+Date: Mon, 27 Feb 2023 16:57:42 -0500
+Subject: [PATCH 13/17] Track and send allowed transports to Connectivity
+
+Update Connectivity with the network transports that UIDs are allowed
+to use.
+
+Requires: I79342edbec92090cca20853ba50ea7fd48ec81c2
+Change-Id: Ifeb8342698a8ba4ce2453d64dc32590aebca5fe5
+Signed-off-by: Pranav Vashi <neobuddy89@gmail.com>
+---
+ .../net/NetworkPolicyManagerService.java      | 54 +++++++++++++++++++
+ 1 file changed, 54 insertions(+)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index 17890f28..4d110935 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -67,6 +67,10 @@ import static android.net.INetd.FIREWALL_RULE_ALLOW;
+ import static android.net.INetd.FIREWALL_RULE_DENY;
+ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
+ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING;
++import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
++import static android.net.NetworkCapabilities.TRANSPORT_USB;
++import static android.net.NetworkCapabilities.TRANSPORT_VPN;
++import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
+ import static android.net.NetworkPolicy.LIMIT_DISABLED;
+ import static android.net.NetworkPolicy.SNOOZE_NEVER;
+ import static android.net.NetworkPolicy.WARNING_DISABLED;
+@@ -1107,6 +1111,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+             mAppStandby.addListener(new NetPolicyAppIdleStateChangeListener());
+             synchronized (mUidRulesFirstLock) {
+                 updateRulesForAppIdleParoleUL();
++                sendUidsAllowedTransportsUL();
+             }
+ 
+             // Listen for subscriber changes
+@@ -1128,6 +1133,47 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         }
+     }
+ 
++    // sync with NetworkCapabilities
++    private static final int MIN_TRANSPORT = TRANSPORT_CELLULAR;
++    private static final int MAX_TRANSPORT = TRANSPORT_USB;
++    private static final int ALL_VALID_TRANSPORTS;
++    static {
++        int transports = 0;
++        for (int i = MIN_TRANSPORT; i <= MAX_TRANSPORT; ++i) {
++            transports |= 1 << i;
++        }
++        ALL_VALID_TRANSPORTS = transports;
++    }
++
++    private static int getAllowedTransportsPackedForUidPolicy(int policy) {
++        int allowedTransports = ALL_VALID_TRANSPORTS;
++        // Where policy rejects a transport, remove the flags that allow it.
++        if ((policy & POLICY_REJECT_VPN) == POLICY_REJECT_VPN) {
++            allowedTransports &= ~(1 << TRANSPORT_VPN);
++        }
++        if ((policy & POLICY_REJECT_WIFI) == POLICY_REJECT_WIFI) {
++            allowedTransports &= ~(1 << TRANSPORT_WIFI);
++        }
++        if ((policy & POLICY_REJECT_CELLULAR) == POLICY_REJECT_CELLULAR) {
++            allowedTransports &= ~(1 << TRANSPORT_CELLULAR);
++        }
++        return allowedTransports;
++    }
++
++    @GuardedBy("mUidRulesFirstLock")
++    public void sendUidsAllowedTransportsUL() {
++        final int size = mUidPolicy.size();
++        final int[] uids = new int[size];
++        final long[] allowedTransportsPacked = new long[size];
++        for (int i = 0; i < size; i++) {
++            final int uid = mUidPolicy.keyAt(i);
++            final int policy = mUidPolicy.valueAt(i);
++            uids[i] = uid;
++            allowedTransportsPacked[i] = getAllowedTransportsPackedForUidPolicy(policy);
++        }
++        mConnManager.setUidsAllowedTransports(uids, allowedTransportsPacked);
++    }
++
+     public CountDownLatch networkScoreAndNetworkManagementServiceReady() {
+         mNetworkManagerReady = true;
+         final CountDownLatch initCompleteSignal = new CountDownLatch(1);
+@@ -3078,6 +3124,14 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+     private void setUidPolicyUncheckedUL(int uid, int oldPolicy, int policy, boolean persist) {
+         setUidPolicyUncheckedUL(uid, policy, false);
+ 
++        final long lastAllowedTransportsPacked = getAllowedTransportsPackedForUidPolicy(oldPolicy);
++        final long allowedTransportsPacked = getAllowedTransportsPackedForUidPolicy(policy);
++
++        if (lastAllowedTransportsPacked != allowedTransportsPacked) {
++            mConnManager.setUidsAllowedTransports(new int[] { uid },
++                    new long[] { allowedTransportsPacked });
++        }
++
+         final boolean notifyApp;
+         if (!isUidValidForAllowlistRulesUL(uid)) {
+             notifyApp = false;
+-- 
+2.41.0
+

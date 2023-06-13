@@ -1,0 +1,32 @@
+From a992f5be3a0d7d285de250c0550c5a7a91be6a2b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Sim=C3=A3o=20Gomes=20Viana?= <devel@superboring.dev>
+Date: Sun, 21 Feb 2021 00:53:08 +0100
+Subject: [PATCH 01/17] NetworkPolicyManagerService: turn this into just a
+ warning
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Change-Id: I827d4b78ed3302af5bb95f8906c8056019568857
+Signed-off-by: Simão Gomes Viana <simao@halogenos.org>
+Signed-off-by: Pranav Vashi <neobuddy89@gmail.com>
+---
+ .../com/android/server/net/NetworkPolicyManagerService.java     | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index 8451a580..b21d5807 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -3718,7 +3718,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+                     ensureActiveCarrierPolicyAL(subId, subscriberId);
+                     maybeUpdateCarrierPolicyCycleAL(subId, subscriberId);
+                 } else {
+-                    Slog.wtf(TAG, "Missing subscriberId for subId " + subId);
++                    Slog.w(TAG, "Missing subscriberId for subId " + subId);
+                 }
+ 
+                 handleNetworkPoliciesUpdateAL(true);
+-- 
+2.41.0
+

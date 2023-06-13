@@ -1,0 +1,406 @@
+From 36ab2c958bc4abd2f09e8c496709c303265e558f Mon Sep 17 00:00:00 2001
+From: Oliver Scott <olivercscott@gmail.com>
+Date: Thu, 15 Apr 2021 10:55:16 -0400
+Subject: [PATCH 08/17] Implement backup/restore for network policy
+
+Modify network policy XML parser helper functions for backup/restore
+scenarios, including secondary users
+
+Bug: https://issuetracker.google.com/issues/207800947
+Change-Id: I77158b344a47138a17fbce72d3ecb3be6927b870
+Signed-off-by: Mohammad Hasan Keramat J <ikeramat@protonmail.com>
+---
+ .../android/net/INetworkPolicyManager.aidl    |   3 +
+ .../backup/NetworkPolicyBackupHelper.java     |  76 +++++++++
+ .../server/backup/SystemBackupAgent.java      |   5 +-
+ .../net/NetworkPolicyManagerService.java      | 161 +++++++++++++-----
+ 4 files changed, 205 insertions(+), 40 deletions(-)
+ create mode 100644 core/java/com/android/server/backup/NetworkPolicyBackupHelper.java
+
+diff --git a/core/java/android/net/INetworkPolicyManager.aidl b/core/java/android/net/INetworkPolicyManager.aidl
+index dc241066..759f6032 100644
+--- a/core/java/android/net/INetworkPolicyManager.aidl
++++ b/core/java/android/net/INetworkPolicyManager.aidl
+@@ -80,4 +80,7 @@ interface INetworkPolicyManager {
+ 
+     boolean isUidNetworkingBlocked(int uid, boolean meteredNetwork);
+     boolean isUidRestrictedOnMeteredNetworks(int uid);
++
++    byte[] getBackupPayload(int user);
++    void applyRestore(in byte[] payload, int user);
+ }
+diff --git a/core/java/com/android/server/backup/NetworkPolicyBackupHelper.java b/core/java/com/android/server/backup/NetworkPolicyBackupHelper.java
+new file mode 100644
+index 00000000..1d17aca0
+--- /dev/null
++++ b/core/java/com/android/server/backup/NetworkPolicyBackupHelper.java
+@@ -0,0 +1,76 @@
++/*
++ * Copyright (C) 2021 The Calyx Institute
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.server.backup;
++
++import android.app.backup.BlobBackupHelper;
++import android.content.Context;
++import android.net.INetworkPolicyManager;
++import android.os.ServiceManager;
++import android.util.Log;
++import android.util.Slog;
++
++public class NetworkPolicyBackupHelper extends BlobBackupHelper {
++    private static final String TAG = "NetworkPolicyBackupHelper";
++    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
++
++    // Current version of the blob schema
++    static final int BLOB_VERSION = 1;
++
++    // Key under which the payload blob is stored
++    static final String KEY_NETWORK_POLICY = "network_policy";
++
++    private final int mUserId;
++
++    public NetworkPolicyBackupHelper(int userId) {
++        super(BLOB_VERSION, KEY_NETWORK_POLICY);
++        mUserId = userId;
++    }
++
++    @Override
++    protected byte[] getBackupPayload(String key) {
++        byte[] newPayload = null;
++        if (KEY_NETWORK_POLICY.equals(key)) {
++            try {
++                INetworkPolicyManager npm = INetworkPolicyManager.Stub.asInterface(
++                        ServiceManager.getService(Context.NETWORK_POLICY_SERVICE));
++                newPayload = npm.getBackupPayload(mUserId);
++            } catch (Exception e) {
++                // Treat as no data
++                Slog.e(TAG, "Couldn't communicate with network policy manager", e);
++                newPayload = null;
++            }
++        }
++        return newPayload;
++    }
++
++    @Override
++    protected void applyRestoredPayload(String key, byte[] payload) {
++        if (DEBUG) {
++            Slog.v(TAG, "Got restore of " + key);
++        }
++
++        if (KEY_NETWORK_POLICY.equals(key)) {
++            try {
++                INetworkPolicyManager.Stub.asInterface(
++                        ServiceManager.getService(Context.NETWORK_POLICY_SERVICE))
++                        .applyRestore(payload, mUserId);
++            } catch (Exception e) {
++                Slog.e(TAG, "Couldn't communicate with network policy manager", e);
++            }
++        }
++    }
++}
+diff --git a/services/core/java/com/android/server/backup/SystemBackupAgent.java b/services/core/java/com/android/server/backup/SystemBackupAgent.java
+index d39d2d1e..4d6b76ce 100644
+--- a/services/core/java/com/android/server/backup/SystemBackupAgent.java
++++ b/services/core/java/com/android/server/backup/SystemBackupAgent.java
+@@ -58,6 +58,7 @@ public class SystemBackupAgent extends BackupAgentHelper {
+     private static final String SLICES_HELPER = "slices";
+     private static final String PEOPLE_HELPER = "people";
+     private static final String APP_LOCALES_HELPER = "app_locales";
++    private static final String NETWORK_POLICY_HELPER = "network_policy";
+ 
+     // These paths must match what the WallpaperManagerService uses.  The leaf *_FILENAME
+     // are also used in the full-backup file format, so must not change unless steps are
+@@ -84,7 +85,8 @@ public class SystemBackupAgent extends BackupAgentHelper {
+     private static final String WALLPAPER_IMAGE_KEY = WallpaperBackupHelper.WALLPAPER_IMAGE_KEY;
+ 
+     private static final Set<String> sEligibleForMultiUser = Sets.newArraySet(
+-            PERMISSION_HELPER, NOTIFICATION_HELPER, SYNC_SETTINGS_HELPER, APP_LOCALES_HELPER);
++            PERMISSION_HELPER, NOTIFICATION_HELPER, SYNC_SETTINGS_HELPER, APP_LOCALES_HELPER,
++            NETWORK_POLICY_HELPER);
+ 
+     private int mUserId = UserHandle.USER_SYSTEM;
+ 
+@@ -104,6 +106,7 @@ public class SystemBackupAgent extends BackupAgentHelper {
+         addHelper(SLICES_HELPER, new SliceBackupHelper(this));
+         addHelper(PEOPLE_HELPER, new PeopleBackupHelper(mUserId));
+         addHelper(APP_LOCALES_HELPER, new AppSpecificLocalesBackupHelper(mUserId));
++        addHelper(NETWORK_POLICY_HELPER, new NetworkPolicyBackupHelper(mUserId));
+     }
+ 
+     @Override
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index 9fca2c38..8a624c5d 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -67,7 +67,6 @@ import static android.net.INetd.FIREWALL_RULE_ALLOW;
+ import static android.net.INetd.FIREWALL_RULE_DENY;
+ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED;
+ import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING;
+-import static android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN;
+ import static android.net.NetworkCapabilities.TRANSPORT_CELLULAR;
+ import static android.net.NetworkCapabilities.TRANSPORT_VPN;
+ import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
+@@ -280,15 +279,22 @@ import dalvik.annotation.optimization.NeverCompile;
+ 
+ import libcore.io.IoUtils;
+ 
++import org.xmlpull.v1.XmlPullParserException;
++
++import java.io.ByteArrayInputStream;
++import java.io.ByteArrayOutputStream;
+ import java.io.File;
+ import java.io.FileDescriptor;
+ import java.io.FileInputStream;
+ import java.io.FileNotFoundException;
+ import java.io.FileOutputStream;
+ import java.io.IOException;
++import java.io.InputStream;
++import java.io.OutputStream;
+ import java.io.PrintWriter;
+ import java.lang.annotation.Retention;
+ import java.lang.annotation.RetentionPolicy;
++import java.nio.charset.StandardCharsets;
+ import java.time.Clock;
+ import java.time.Instant;
+ import java.time.ZoneId;
+@@ -2605,8 +2611,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         FileInputStream fis = null;
+         try {
+             fis = mPolicyFile.openRead();
+-            readPolicyXml(fis);
+-
++            readPolicyXml(fis, false, UserHandle.USER_ALL);
+         } catch (FileNotFoundException e) {
+             // missing policy is okay, probably first boot
+             upgradeDefaultBackgroundDataUL();
+@@ -2617,8 +2622,9 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         }
+     }
+ 
+-    private void readPolicyXml(FileInputStream fis) {
+-        final TypedXmlPullParser in = Xml.resolvePullParser(fis);
++    private void readPolicyXml(InputStream inputStream, boolean forRestore, int userId)
++            throws IOException, XmlPullParserException {
++        final TypedXmlPullParser in = Xml.resolvePullParser(inputStream);
+ 
+         // Must save the <restrict-background> tags and convert them to <uid-policy> later,
+         // to skip UIDs that were explicitly denied.
+@@ -2736,7 +2742,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+                                 lastLimitSnooze, metered, inferred));
+                     }
+                 } else if (TAG_UID_POLICY.equals(tag)) {
+-                    final int uid = readIntAttribute(in, ATTR_UID);
++                    int uid = readUidAttribute(in, forRestore, userId);
+                     final int policy = readIntAttribute(in, ATTR_POLICY);
+ 
+                     if (UserHandle.isApp(uid)) {
+@@ -2759,10 +2765,10 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+                 } else if (TAG_WHITELIST.equals(tag)) {
+                     insideAllowlist = true;
+                 } else if (TAG_RESTRICT_BACKGROUND.equals(tag) && insideAllowlist) {
+-                    final int uid = readIntAttribute(in, ATTR_UID);
++                    int uid = readUidAttribute(in, forRestore, userId);
+                     restrictBackgroundAllowedUids.append(uid, true);
+                 } else if (TAG_REVOKED_RESTRICT_BACKGROUND.equals(tag) && insideAllowlist) {
+-                    final int uid = readIntAttribute(in, ATTR_UID);
++                    int uid = readUidAttribute(in, forRestore, userId);
+                     mRestrictBackgroundAllowlistRevokedUids.put(uid, true);
+                 }
+             } else if (type == END_TAG) {
+@@ -2870,8 +2876,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         FileOutputStream fos = null;
+         try {
+             fos = mPolicyFile.startWrite();
+-            writePolicyXml(fos);
+-
++            writePolicyXml(fos, false, UserHandle.USER_ALL);
+             mPolicyFile.finishWrite(fos);
+         } catch (IOException e) {
+             if (fos != null) {
+@@ -2880,10 +2885,64 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         }
+     }
+ 
+-    private void writePolicyXml(FileOutputStream fos) {
+-        TypedXmlSerializer out = Xml.resolveSerializer(fos);
++    private void writePolicyXml(OutputStream outputStream, boolean forBackup, int userId)
++            throws IOException {
++        TypedXmlSerializer out = Xml.resolveSerializer(outputStream);
+         out.startDocument(null, true);
+ 
++        // only write UID-independent attributes during normal operation or system user backups
++        if (!forBackup || userId == UserHandle.USER_SYSTEM) {
++            writeUidIndependentAttributes(out);
++        }
++
++        // write all known uid policies
++        for (int i = 0; i < mUidPolicy.size(); i++) {
++            final int uid = mUidPolicy.keyAt(i);
++            final int policy = mUidPolicy.valueAt(i);
++
++            // skip writing policies belonging to other users
++            if (forBackup && UserHandle.getUserId(uid) != userId) {
++                continue;
++            }
++            // skip writing empty policies
++            if (policy == POLICY_NONE) continue;
++
++            out.startTag(null, TAG_UID_POLICY);
++            if (!forBackup) {
++                writeIntAttribute(out, ATTR_UID, uid);
++            } else {
++                writeStringAttribute(out, ATTR_XML_UTILS_NAME, getPackageForUid(uid));
++            }
++            writeIntAttribute(out, ATTR_POLICY, policy);
++            out.endTag(null, TAG_UID_POLICY);
++        }
++
++        // write all allowlists
++        out.startTag(null, TAG_WHITELIST);
++
++        // revoked restrict background allowlist
++        int size = mRestrictBackgroundAllowlistRevokedUids.size();
++        for (int i = 0; i < size; i++) {
++            final int uid = mRestrictBackgroundAllowlistRevokedUids.keyAt(i);
++            // skip writing policies belonging to other users
++            if (forBackup && UserHandle.getUserId(uid) != userId) {
++                continue;
++            }
++            out.startTag(null, TAG_REVOKED_RESTRICT_BACKGROUND);
++            if (!forBackup) {
++                writeIntAttribute(out, ATTR_UID, uid);
++            } else {
++                writeStringAttribute(out, ATTR_XML_UTILS_NAME, getPackageForUid(uid));
++            }
++            out.endTag(null, TAG_REVOKED_RESTRICT_BACKGROUND);
++        }
++
++        out.endTag(null, TAG_WHITELIST);
++
++        out.endDocument();
++    }
++
++    private void writeUidIndependentAttributes(TypedXmlSerializer out) throws IOException {
+         out.startTag(null, TAG_POLICY_LIST);
+         writeIntAttribute(out, ATTR_VERSION, VERSION_LATEST);
+         writeBooleanAttribute(out, ATTR_RESTRICT_BACKGROUND, mRestrictBackground);
+@@ -2925,38 +2984,39 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+             writeBooleanAttribute(out, ATTR_INFERRED, policy.inferred);
+             out.endTag(null, TAG_NETWORK_POLICY);
+         }
+-
+-        // write all known uid policies
+-        for (int i = 0; i < mUidPolicy.size(); i++) {
+-            final int uid = mUidPolicy.keyAt(i);
+-            final int policy = mUidPolicy.valueAt(i);
+-
+-            // skip writing empty policies
+-            if (policy == POLICY_NONE) continue;
+-
+-            out.startTag(null, TAG_UID_POLICY);
+-            writeIntAttribute(out, ATTR_UID, uid);
+-            writeIntAttribute(out, ATTR_POLICY, policy);
+-            out.endTag(null, TAG_UID_POLICY);
+-        }
+-
+         out.endTag(null, TAG_POLICY_LIST);
++    }
+ 
+-        // write all allowlists
+-        out.startTag(null, TAG_WHITELIST);
+-
+-        // revoked restrict background allowlist
+-        int size = mRestrictBackgroundAllowlistRevokedUids.size();
+-        for (int i = 0; i < size; i++) {
+-            final int uid = mRestrictBackgroundAllowlistRevokedUids.keyAt(i);
+-            out.startTag(null, TAG_REVOKED_RESTRICT_BACKGROUND);
+-            writeIntAttribute(out, ATTR_UID, uid);
+-            out.endTag(null, TAG_REVOKED_RESTRICT_BACKGROUND);
++    @Override
++    public byte[] getBackupPayload(int user) {
++        enforceSystemCaller();
++        if (LOGD) Slog.d(TAG, "getBackupPayload u= " + user);
++        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
++        try {
++            writePolicyXml(baos, true, user);
++            return baos.toByteArray();
++        } catch (IOException e) {
++            Slog.w(TAG, "getBackupPayload: error writing payload for user " + user, e);
+         }
++        return null;
++    }
+ 
+-        out.endTag(null, TAG_WHITELIST);
++    @Override
++    public void applyRestore(byte[] payload, int user) {
++        enforceSystemCaller();
++        if (LOGD) Slog.d(TAG, "applyRestore u=" + user + " payload="
++                + (payload != null ? new String(payload, StandardCharsets.UTF_8) : null));
++        if (payload == null) {
++            Slog.w(TAG, "applyRestore: no payload to restore for user " + user);
++            return;
++        }
+ 
+-        out.endDocument();
++        final ByteArrayInputStream bais = new ByteArrayInputStream(payload);
++        try {
++            readPolicyXml(bais, true, user);
++        } catch (IOException | XmlPullParserException e) {
++            Slog.w(TAG, "applyRestore: error reading payload for user " + user, e);
++        }
+     }
+ 
+     @Override
+@@ -3153,6 +3213,12 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         }
+     }
+ 
++    private void enforceSystemCaller() {
++        if (Binder.getCallingUid() != android.os.Process.SYSTEM_UID) {
++            throw new SecurityException("Caller must be system");
++        }
++    }
++
+     @Override
+     public void registerListener(@NonNull INetworkPolicyListener listener) {
+         Objects.requireNonNull(listener);
+@@ -6331,6 +6397,23 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         }
+     }
+ 
++    private int readUidAttribute(TypedXmlPullParser in, boolean forRestore, int userId)
++            throws IOException {
++        if (!forRestore) {
++            return readIntAttribute(in, ATTR_UID);
++        } else {
++            return getUidForPackage(readStringAttribute(in, ATTR_XML_UTILS_NAME), userId);
++        }
++    }
++
++    private String getPackageForUid(int uid) {
++        try {
++            return mContext.getPackageManager().getPackagesForUid(uid)[0];
++        } catch (Exception e) {
++            return null;
++        }
++    }
++
+     private int getUidForPackage(String packageName, int userId) {
+         try {
+             return mContext.getPackageManager().getPackageUidAsUser(packageName,
+-- 
+2.41.0
+

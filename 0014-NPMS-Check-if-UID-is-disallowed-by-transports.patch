@@ -1,0 +1,32 @@
+From 72c48b320bd289dd2345ed32c35aa55f34951b3f Mon Sep 17 00:00:00 2001
+From: Tommy Webb <tommy@calyxinstitute.org>
+Date: Wed, 12 Apr 2023 13:43:18 -0400
+Subject: [PATCH 14/17] NPMS: Check if UID is disallowed by transports
+
+The isUidNetworkingBlocked method now also consults Connectivity as to
+whether the UID is currently disallowed from accessing networks.
+
+Requires: I2729b61c349ec2812a74d7d1c04b90a58b0f5b88
+Change-Id: I1cf17b837af5f62c97d99127e1811aa58ef734bf
+Signed-off-by: Pranav Vashi <neobuddy89@gmail.com>
+---
+ .../com/android/server/net/NetworkPolicyManagerService.java    | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index 4d110935..4564b381 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -6243,7 +6243,8 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+ 
+         mStatLogger.logDurationStat(Stats.IS_UID_NETWORKING_BLOCKED, startTime);
+ 
+-        return blockedReasons != BLOCKED_REASON_NONE;
++        return blockedReasons != BLOCKED_REASON_NONE
++                || mConnManager.isUidCurrentlyDisallowedByPolicy(uid);
+     }
+ 
+     @Override
+-- 
+2.41.0
+

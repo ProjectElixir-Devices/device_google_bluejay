@@ -1,0 +1,54 @@
+From 350cfa01912ad727b15cebfa253d7d9e62f81b48 Mon Sep 17 00:00:00 2001
+From: Oliver Scott <olivercscott@gmail.com>
+Date: Sat, 9 Oct 2021 20:16:19 -0400
+Subject: [PATCH 03/17] Add Restricted Mode uid allowlist setting observer to
+ NetworkPolicyManagerService
+
+This allows to add / remove UIDs from restricted mode's allowlist at runtime.
+
+Bug: https://issuetracker.google.com/issues/206947902
+Test: adb shell settings put global uids_allowed_on_restricted_networks "UID"
+Change-Id: I1d3edf3fb1ee62ddf9ee07e15cf1da1e23cc18fa
+(cherry picked from commit 54217bfab16a9201f35bb1e9be8b26bb56a5809e)
+Signed-off-by: Mohammad Hasan Keramat J <ikeramat@protonmail.com>
+---
+ .../server/net/NetworkPolicyManagerService.java  | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index cff22d29..93c391d0 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -460,6 +460,11 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+ 
+     private static final String PROP_SUB_PLAN_OWNER = "persist.sys.sub_plan_owner";
+ 
++    // TODO: this needs to be kept in sync with
++    //  ConnectivitySettingsManager#UIDS_ALLOWED_ON_RESTRICTED_NETWORKS
++    private static final String UIDS_ALLOWED_ON_RESTRICTED_NETWORKS =
++            "uids_allowed_on_restricted_networks";
++
+     private final Context mContext;
+     private final IActivityManager mActivityManager;
+     private NetworkStatsManager mNetworkStats;
+@@ -838,6 +843,17 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         // Expose private service for system components to use.
+         LocalServices.addService(NetworkPolicyManagerInternal.class,
+                 new NetworkPolicyManagerInternalImpl());
++
++        mContext.getContentResolver().registerContentObserver(
++                Settings.Global.getUriFor(UIDS_ALLOWED_ON_RESTRICTED_NETWORKS), false,
++                new ContentObserver(mHandler) {
++            @Override
++            public void onChange(boolean selfChange) {
++                synchronized (mUidRulesFirstLock) {
++                    updateRestrictedModeAllowlistUL();
++                }
++            }
++        });
+     }
+ 
+     public void bindConnectivityManager() {
+-- 
+2.41.0
+

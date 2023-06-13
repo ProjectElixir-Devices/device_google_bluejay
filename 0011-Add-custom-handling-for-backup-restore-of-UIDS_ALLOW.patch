@@ -1,0 +1,47 @@
+From a9eadb40415df7f2f7fc01dc8000f05cd11029bb Mon Sep 17 00:00:00 2001
+From: Oliver Scott <olivercscott@gmail.com>
+Date: Wed, 6 Apr 2022 03:12:31 +0200
+Subject: [PATCH 11/17] Add custom handling for backup/restore of
+ UIDS_ALLOWED_ON_RESTRICTED_NETWORKS
+
+Change-Id: I8a4086692c385e9d6166a9bcb11d0a16c9fc7422
+(cherry picked from commit aca11ac58e99aafddf250f3724e7d20b4037ea13)
+Signed-off-by: Mohammad Hasan Keramat J <ikeramat@protonmail.com>
+---
+ .../net/NetworkPolicyManagerService.java      | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index e2a22231..4f89b678 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -2940,6 +2940,26 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+             out.endTag(null, TAG_UID_POLICY);
+         }
+ 
++        if (forBackup) {
++            try {
++                List<PackageInfo> packages = mIPm.getPackagesHoldingPermissions(
++                        new String[]{android.Manifest.permission.INTERNET}, 0, userId
++                ).getList();
++                List<Integer> uids = packages.stream().map(packageInfo ->
++                        packageInfo.applicationInfo.uid).collect(Collectors.toList());
++                uids.removeAll(
++                        ConnectivitySettingsManager.getUidsAllowedOnRestrictedNetworks(mContext));
++                for (int uid : uids) {
++                    out.startTag(null, TAG_UID_POLICY);
++                    writeStringAttribute(out, ATTR_XML_UTILS_NAME, getPackageForUid(uid));
++                    writeIntAttribute(out, ATTR_POLICY, POLICY_REJECT_ALL);
++                    out.endTag(null, TAG_UID_POLICY);
++                }
++            } catch (RemoteException ignored) {
++
++            }
++        }
++
+         // write all allowlists
+         out.startTag(null, TAG_WHITELIST);
+ 
+-- 
+2.41.0
+

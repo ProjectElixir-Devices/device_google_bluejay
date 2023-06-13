@@ -1,0 +1,39 @@
+From dc018dbbde2f1b9e1546385bc0d3e8b02f46602c Mon Sep 17 00:00:00 2001
+From: Oliver Scott <olivercscott@gmail.com>
+Date: Mon, 10 Jan 2022 19:17:00 +0100
+Subject: [PATCH 09/17] Clear calling identity when setting restricted
+ networking mode UID firewall rules
+
+* NetworkManager setFirewallUidRule checks that the caller is system uid
+
+* Public service entry points are already protected with MANAGE_NETWORK_POLICY permission so simply clear calling identity around NetworkPolicyManagerService setUidFirewallRule() call to resolve crash for secondary users during settings change.
+
+Change-Id: I2fb22e77c0afa67acfbb5b9d57173df5aefb0d57
+Signed-off-by: Mohammad Hasan Keramat J <ikeramat@protonmail.com>
+---
+ .../android/server/net/NetworkPolicyManagerService.java  | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index 8a624c5d..083d9af4 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -4417,8 +4417,13 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         if (mRestrictedNetworkingMode) {
+             // Note: setUidFirewallRule also updates mUidFirewallRestrictedModeRules.
+             // In this case, default firewall rules can also be added.
+-            setUidFirewallRuleUL(FIREWALL_CHAIN_RESTRICTED, uid,
+-                    getRestrictedModeFirewallRule(effectiveBlockedReasons));
++            long token = Binder.clearCallingIdentity();
++            try {
++                setUidFirewallRuleUL(FIREWALL_CHAIN_RESTRICTED, uid,
++                        getRestrictedModeFirewallRule(effectiveBlockedReasons));
++            } finally {
++                Binder.restoreCallingIdentity(token);
++            }
+         }
+     }
+ 
+-- 
+2.41.0
+

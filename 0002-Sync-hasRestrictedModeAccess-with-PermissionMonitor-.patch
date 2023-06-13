@@ -1,0 +1,43 @@
+From 1a6624543bd06f0e2f278b5ee803eecbf168e75f Mon Sep 17 00:00:00 2001
+From: Oliver Scott <olivercscott@gmail.com>
+Date: Fri, 8 Oct 2021 14:42:28 -0400
+Subject: [PATCH 02/17] Sync hasRestrictedModeAccess with PermissionMonitor in
+ NetworkPolicyManagerService
+
+NetworkPolicyManagerService is missing PermissionMonitor's check against getUidsAllowedOnRestrictedNetworks which causes restricted networking mode's global setting allowlist to be disfunctional.
+This adds the check to NetworkPolicyManagerService.
+
+Bug: https://issuetracker.google.com/issues/206947902
+Change-Id: I98c5fe72bb778a1d843ce3c3d320c26bed5297cc
+(cherry picked from commit 3b6f2c8d1fb587f2770d8974f10dd192d623ccec)
+Signed-off-by: Mohammad Hasan Keramat J <ikeramat@protonmail.com>
+---
+ .../com/android/server/net/NetworkPolicyManagerService.java  | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index b21d5807..cff22d29 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -172,6 +172,7 @@ import android.content.res.Resources;
+ import android.database.ContentObserver;
+ import android.net.ConnectivityManager;
+ import android.net.ConnectivityManager.NetworkCallback;
++import android.net.ConnectivitySettingsManager;
+ import android.net.INetworkManagementEventObserver;
+ import android.net.INetworkPolicyListener;
+ import android.net.INetworkPolicyManager;
+@@ -4295,7 +4296,9 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+         try {
+             // TODO: this needs to be kept in sync with
+             // PermissionMonitor#hasRestrictedNetworkPermission
+-            return mIPm.checkUidPermission(CONNECTIVITY_USE_RESTRICTED_NETWORKS, uid)
++            return ConnectivitySettingsManager.getUidsAllowedOnRestrictedNetworks(mContext)
++                    .contains(uid)
++                    || mIPm.checkUidPermission(CONNECTIVITY_USE_RESTRICTED_NETWORKS, uid)
+                     == PERMISSION_GRANTED
+                     || mIPm.checkUidPermission(NETWORK_STACK, uid) == PERMISSION_GRANTED
+                     || mIPm.checkUidPermission(PERMISSION_MAINLINE_NETWORK_STACK, uid)
+-- 
+2.41.0
+

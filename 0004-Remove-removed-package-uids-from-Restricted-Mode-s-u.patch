@@ -1,0 +1,38 @@
+From de37987b0bcb710ff6e80660d24c447aaf75b9f0 Mon Sep 17 00:00:00 2001
+From: Oliver Scott <olivercscott@gmail.com>
+Date: Sat, 9 Oct 2021 22:18:36 -0400
+Subject: [PATCH 04/17] Remove removed package uids from Restricted Mode's uid
+ allowlist
+
+Currently uids from removed packages remain in Restricted Mode's uid allowlist.
+This is unsafe given that new packages can be granted the uid and thereby network access by default.
+This addresses the problem by listening for ACTION_PACKAGE_REMOVED and removing the uid from the allowlist.
+
+Bug: https://issuetracker.google.com/issues/206947902
+Change-Id: I16ee9a8aa869f6e4eaa9dfc494c588e74ac2e8f2
+(cherry picked from commit c84c7adcedb16da65c5ce6b6f30441b64f1bcf85)
+Signed-off-by: Mohammad Hasan Keramat J <ikeramat@protonmail.com>
+---
+ .../com/android/server/net/NetworkPolicyManagerService.java | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+index 93c391d0..103847e5 100644
+--- a/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
++++ b/services/core/java/com/android/server/net/NetworkPolicyManagerService.java
+@@ -4898,6 +4898,12 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
+ 
+         // ...then update iptables asynchronously.
+         mHandler.obtainMessage(MSG_RESET_FIREWALL_RULES_BY_UID, uid, 0).sendToTarget();
++
++        Set<Integer> uids =
++                ConnectivitySettingsManager.getUidsAllowedOnRestrictedNetworks(mContext);
++        uids.remove(uid);
++        ConnectivitySettingsManager.setUidsAllowedOnRestrictedNetworks(mContext,
++                uids);
+     }
+ 
+     /**
+-- 
+2.41.0
+
