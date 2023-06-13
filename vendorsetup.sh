@@ -1,9 +1,27 @@
 TOP=$(pwd)
 cd $TOP/packages/apps/Settings
+git reset --hard FETCH_HEAD
 patch -p1 < $TOP/device/google/bluejay/0001-Settings-Add-support-for-allowing-disallowing-apps-o.patch
 patch -p1 < $TOP/device/google/bluejay/0002-Settings-Add-support-for-allowing-disallowing-apps-o.patch
 cd $TOP/frameworks/base
-patch -p1 < $TOP/device/google/bluejay/0001-fw-b-Add-support-for-allowing-disallowing-apps-on-ce.patch
+git reset --hard FETCH_HEAD
+patch -p1 < $TOP/device/google/bluejay/0001-NetworkPolicyManagerService-turn-this-into-just-a-wa.patch
+patch -p1 < $TOP/device/google/bluejay/0002-Sync-hasRestrictedModeAccess-with-PermissionMonitor-.patch
+patch -p1 < $TOP/device/google/bluejay/0003-Add-Restricted-Mode-uid-allowlist-setting-observer-t.patch
+patch -p1 < $TOP/device/google/bluejay/0004-Remove-removed-package-uids-from-Restricted-Mode-s-u.patch
+patch -p1 < $TOP/device/google/bluejay/0005-Restricted-Networking-Mode-fixes.patch
+patch -p1 < $TOP/device/google/bluejay/0006-fw-b-Add-support-for-allowing-disallowing-apps-on-ce.patch
+patch -p1 < $TOP/device/google/bluejay/0007-Split-network-policy-XML-parsing-into-read-write-hel.patch
+patch -p1 < $TOP/device/google/bluejay/0008-Implement-backup-restore-for-network-policy.patch
+patch -p1 < $TOP/device/google/bluejay/0009-Clear-calling-identity-when-setting-restricted-netwo.patch
+patch -p1 < $TOP/device/google/bluejay/0010-Migrate-from-network-isolation-to-restricted-network.patch
+patch -p1 < $TOP/device/google/bluejay/0011-Add-custom-handling-for-backup-restore-of-UIDS_ALLOW.patch
+patch -p1 < $TOP/device/google/bluejay/0012-Do-not-consider-transports-for-restricted-mode.patch
+patch -p1 < $TOP/device/google/bluejay/0013-Track-and-send-allowed-transports-to-Connectivity.patch
+patch -p1 < $TOP/device/google/bluejay/0014-NPMS-Check-if-UID-is-disallowed-by-transports.patch
+patch -p1 < $TOP/device/google/bluejay/0015-Support-per-UID-VPN-lockdown-policy.patch
+patch -p1 < $TOP/device/google/bluejay/0016-fixup-fw-b-Add-support-for-allowing-disallowing-apps.patch
+patch -p1 < $TOP/device/google/bluejay/0017-Hide-data-limit-notfication-if-data-not-active-nor-d.patch
 cd $TOP
 
 rm -rf device/google/gs101
