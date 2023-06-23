@@ -19,3 +19,4 @@ kernel/google/gs101/private/google-modules/touch
 kernel/google/gs101/private/google-modules/uwb
 kernel/google/gs101/private/google-modules/video
 kernel/google/gs101/private/google-modules/wlan
+packages/apps/PixelParts
