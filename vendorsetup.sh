@@ -65,3 +65,12 @@ git clone https://android.googlesource.com/kernel/google-modules/video/gchips --
 
 rm -rf kernel/google/gs101/private/google-modules/wlan
 git clone https://android.googlesource.com/kernel/google-modules/wlan/bcmdhd/bcm4389 --depth 1 --no-tags --single-branch -b android-13.0.0_r0.74 kernel/google/gs101/private/google-modules/wlan/bcmdhd4389
+
+TOP=$(pwd)
+cd $TOP/hardware/google/gchips
+git reset 75c487c45a40ca66a06722f5ac12b1ece58a6b13
+cd $TOP/hardware/google/graphics/common
+git reset 4e8a17284a10321ba6f78e3578bfde43827ed79c
+cd $TOP/hardware/google/pixel
+git reset 222544ec1166be5d49face442f5c6600fd9e8424
+cd $TOP
