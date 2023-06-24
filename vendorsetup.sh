@@ -83,6 +83,6 @@ function reset() {
 # Reclones repo + resets to hash
 reset "https://github.com/LineageOS/android_hardware_google_graphics_common" "31ad515db643b6873fed25952b3172aaf8161761"
 reset "https://github.com/LineageOS/android_hardware_google_gchips" "5ff4c71032539ed63b7fd78d65ca501b87976a13"
-reset "https://github.com/LineageOS/android_hardware_google_pixel" "5b75a7d4842cec63ed8d7435ea54f31e6ef85c51"
+reset "https://github.com/LineageOS/android_hardware_google_pixel" "222544ec1166be5d49face442f5c6600fd9e8424"
 
 cd $TOP
