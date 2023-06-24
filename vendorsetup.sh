@@ -67,10 +67,22 @@ rm -rf kernel/google/gs101/private/google-modules/wlan
 git clone https://android.googlesource.com/kernel/google-modules/wlan/bcmdhd/bcm4389 --depth 1 --no-tags --single-branch -b android-13.0.0_r0.74 kernel/google/gs101/private/google-modules/wlan/bcmdhd4389
 
 TOP=$(pwd)
-cd $TOP/hardware/google/gchips
-git reset 75c487c45a40ca66a06722f5ac12b1ece58a6b13
-cd $TOP/hardware/google/graphics/common
-git reset 4e8a17284a10321ba6f78e3578bfde43827ed79c
-cd $TOP/hardware/google/pixel
-git reset 222544ec1166be5d49face442f5c6600fd9e8424
+
+function reset() {
+  REPO=${1/\/LineageOS\//|} # Convert "/LineageOS/" to |
+  IFS='|' read -ra REPO <<< "$REPO" # Split by delimiter
+  FOLDER=${REPO[1]/android_/} # Remove platform_ from dir name
+  FOLDER=${FOLDER//_//} # replace _ with / to make a path to directory to patch
+
+  rm -rf $TOP/$FOLDER
+  git clone $1 $TOP/$FOLDER
+  cd $TOP/$FOLDER
+  git reset --hard $2
+}
+
+# Reclones repo + resets to hash
+reset "https://github.com/LineageOS/android_hardware_google_graphics_common" "31ad515db643b6873fed25952b3172aaf8161761"
+reset "https://github.com/LineageOS/android_hardware_google_gchips" "5ff4c71032539ed63b7fd78d65ca501b87976a13"
+reset "https://github.com/LineageOS/android_hardware_google_pixel" "5b75a7d4842cec63ed8d7435ea54f31e6ef85c51"
+
 cd $TOP
