@@ -11,7 +11,7 @@ rm -rf packages/apps/PixelParts
 git clone https://github.com/ProjectElixir-Devices/packages_apps_PixelParts packages/apps/PixelParts --depth 1
 
 rm -rf hardware/google/pixel-sepolicy
-git clone https://github.com/ItsLynix/android_hardware_google_pixel-sepolicy hardware/google/sepolicy --depth 1
+git clone https://github.com/ItsLynix/android_hardware_google_pixel-sepolicy hardware/google/pixel-sepolicy --depth 1
 
 rm -rf kernel/google/gs201/private/devices/google/bluejay
 git clone https://android.googlesource.com/kernel/devices/google/bluejay --depth 1 --no-tags --single-branch -b android-13.0.0_r0.106 kernel/google/gs201/private/devices/google/bluejay
