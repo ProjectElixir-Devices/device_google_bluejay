@@ -238,10 +238,9 @@ PRODUCT_COPY_FILES += \
 
 # Keyboard bottom padding in dp for portrait mode and height ratio
 PRODUCT_PRODUCT_PROPERTIES += \
-    ro.com.google.ime.kb_pad_port_b=6.4 \
-
-PRODUCT_PRODUCT_PROPERTIES ?= \
-    ro.com.google.ime.height_ratio=1.05
+     ro.com.google.ime.height_ratio=1.05
+#    ro.com.google.ime.kb_pad_port_b=6.4 \
+#    ro.com.google.ime.height_ratio=1.05
 
 # UFS: the script is used to select the corresponding firmware to run FFU.
 PRODUCT_PACKAGES += ufs_firmware_update.sh
